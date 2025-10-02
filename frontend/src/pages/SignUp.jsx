@@ -40,7 +40,7 @@ function SignUp() {
                 throw new Error("Invalid user data from server");
             }
             dispatch(signInSuccess(userData.user));
-            navigate("/");
+            navigate("/dashboard");
         } catch (error) {
             setError(error.message);
         } finally {

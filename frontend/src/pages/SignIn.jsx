@@ -29,7 +29,7 @@ function SignIn() {
                 throw new Error("Invalid user data from server");
             }
             dispatch(signInSuccess(data.user));
-            navigate("/");
+            navigate("/dashboard");
         } catch (error) {
             dispatch(signInFailure(error.message));
         }

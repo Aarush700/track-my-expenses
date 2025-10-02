@@ -85,7 +85,7 @@ export default function Header() {
                                 />
                             </Link>
                             <Link to="/sign-in" onClick={handleSignOut}>
-                                <li className="hover:text-blue-200 transition">Sign Out</li>
+                                <li className="hover:text-blue-200 transition">Logout</li>
                             </Link>
                         </>
                     ) : (
@@ -137,7 +137,7 @@ export default function Header() {
                                     <li className="hover:text-blue-200 transition">Profile</li>
                                 </Link>
                                 <Link to="/sign-in" onClick={() => { handleSignOut(); toggleMenu(); }}>
-                                    <li className="hover:text-blue-200 transition">Sign Out</li>
+                                    <li className="hover:text-blue-200 transition">Logout</li>
                                 </Link>
                             </>
                         ) : (
