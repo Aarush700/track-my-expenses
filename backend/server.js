@@ -7,6 +7,7 @@ import rateLimit from "express-rate-limit";
 import cors from "cors";
 import userRoutes from "./routes/user.route.js";
 import authRoutes from "./routes/auth.route.js";
+import transactionRoutes from "./routes/transaction.route.js";
 
 dotenv.config();
 
@@ -70,6 +71,7 @@ mongoose
 // Routes
 app.use("/api/user", userRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/transactions", transactionRoutes);
 
 app.get("/", (req, res) => {
     res.status(200).json({

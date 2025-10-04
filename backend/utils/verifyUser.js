@@ -9,6 +9,7 @@ import { errorHandler } from "./error.js";
  * @param {Object} res - Express response object
  * @param {Function} next - Express next middleware function
  */
+
 export const verifyToken = (req, res, next) => {
     const token = req.cookies?.access_token;
 

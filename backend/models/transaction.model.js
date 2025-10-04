@@ -5,6 +5,7 @@ import mongoose from "mongoose";
  * Supports both income and expense with a 'type' field
  * Linked to user for personal tracking
  */
+
 const transactionSchema = new mongoose.Schema(
     {
         userId: {
