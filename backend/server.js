@@ -8,6 +8,7 @@ import cors from "cors";
 import userRoutes from "./routes/user.route.js";
 import authRoutes from "./routes/auth.route.js";
 import transactionRoutes from "./routes/transaction.route.js";
+import contactRoutes from "./routes/contact.route.js";
 
 dotenv.config();
 
@@ -72,6 +73,7 @@ mongoose
 app.use("/api/user", userRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/transactions", transactionRoutes);
+app.use("/api/contact", contactRoutes);
 
 app.get("/", (req, res) => {
     res.status(200).json({
