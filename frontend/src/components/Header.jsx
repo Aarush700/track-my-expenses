@@ -31,7 +31,7 @@ export default function Header() {
                         />
                     </div>
                     <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                        Expense Tracker
+                        Track My Expenses
                     </h1>
                 </Link>
 

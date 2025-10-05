@@ -85,7 +85,7 @@ function ContactUs() {
                                 </div>
                                 <div>
                                     <h3 className="font-semibold text-gray-800 mb-1">Email</h3>
-                                    <p className="text-gray-600 text-sm">support@expensetracker.com</p>
+                                    <p className="text-gray-600 text-sm">track.my.expenses.g4@gmail.com</p>
                                 </div>
                             </div>
                         </div>
@@ -98,7 +98,7 @@ function ContactUs() {
                                 </div>
                                 <div>
                                     <h3 className="font-semibold text-gray-800 mb-1">Phone</h3>
-                                    <p className="text-gray-600 text-sm">+1 (555) 123-4567</p>
+                                    <p className="text-gray-600 text-sm">+61 0405 547 398</p>
                                 </div>
                             </div>
                         </div>
@@ -111,7 +111,7 @@ function ContactUs() {
                                 </div>
                                 <div>
                                     <h3 className="font-semibold text-gray-800 mb-1">Office</h3>
-                                    <p className="text-gray-600 text-sm">123 Business St, Suite 100<br />San Francisco, CA 94105</p>
+                                    <p className="text-gray-600 text-sm">121 John St, Hawthorn<br />Melbourne, VIC 3019</p>
                                 </div>
                             </div>
                         </div>
@@ -131,8 +131,8 @@ function ContactUs() {
                             {/* Success/Error Message */}
                             {status.message && (
                                 <div className={`mb-6 p-4 rounded-lg flex items-start gap-3 ${status.type === 'success'
-                                        ? 'bg-green-50 border border-green-200'
-                                        : 'bg-red-50 border border-red-200'
+                                    ? 'bg-green-50 border border-green-200'
+                                    : 'bg-red-50 border border-red-200'
                                     }`}>
                                     {status.type === 'success' ? (
                                         <CheckCircle className="text-green-600 flex-shrink-0" size={20} />
@@ -215,8 +215,8 @@ function ContactUs() {
                                     onClick={handleSubmit}
                                     disabled={isSubmitting}
                                     className={`w-full py-3 px-6 rounded-lg font-semibold text-white transition-all flex items-center justify-center gap-2 ${isSubmitting
-                                            ? 'bg-gray-400 cursor-not-allowed'
-                                            : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg'
+                                        ? 'bg-gray-400 cursor-not-allowed'
+                                        : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg'
                                         }`}
                                 >
                                     {isSubmitting ? (
@@ -250,7 +250,7 @@ function ContactUs() {
                         </div>
                         <div>
                             <h3 className="font-semibold text-gray-800 mb-2">Do you offer phone support?</h3>
-                            <p className="text-gray-600 text-sm">Yes! Call us at +1 (555) 123-4567 during business hours.</p>
+                            <p className="text-gray-600 text-sm">Yes! Call us at +61 0405 547 398 during business hours.</p>
                         </div>
                         <div>
                             <h3 className="font-semibold text-gray-800 mb-2">Can I schedule a demo?</h3>

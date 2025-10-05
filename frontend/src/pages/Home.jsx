@@ -195,7 +195,7 @@ function Home() {
                         <div className="text-center md:text-right">
                             <p className="text-gray-400 mb-2">Need help?</p>
                             <a href="mailto:support@trackmyexpenses.com" className="text-white hover:text-gray-300 transition">
-                                support@trackmyexpenses.com
+                                track.my.expenses.g4@gmail.com
                             </a>
                         </div>
                     </div>
