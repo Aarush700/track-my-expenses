@@ -19,7 +19,7 @@ export default function Header() {
     };
 
     return (
-        <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50 backdrop-blur-sm bg-white/95">
+        <header className="border-b border-gray-200 shadow-sm sticky top-0 z-50 backdrop-blur-sm bg-white/95">
             <div className="flex justify-between items-center max-w-7xl mx-auto px-4 py-3">
                 {/* Logo and Brand */}
                 <Link to={currentUser ? "/dashboard" : "/"} className="flex items-center gap-3 group">
