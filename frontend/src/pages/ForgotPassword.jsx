@@ -46,7 +46,7 @@ function ForgotPassword() {
 
     return (
         <div className="p-6 max-w-lg mx-auto min-h-screen flex items-center justify-center">
-            <div className="w-full">
+            <div className="w-full border border-gray-300 rounded-lg p-6 shadow-md">
                 <h1 className="text-4xl text-center font-bold mb-8">Forgot Password</h1>
                 <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
                     <input

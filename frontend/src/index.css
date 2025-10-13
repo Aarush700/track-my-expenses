@@ -1,1 +1,6 @@
 @import "tailwindcss";
+body {
+    background: linear-gradient(to bottom right, #eef2ff, #e0e7ff); /* Matches Tailwind's blue-50 to indigo-100 */
+    min-height: 100vh; /* Ensure full viewport height */
+    margin: 0; /* Remove default margin */
+}
