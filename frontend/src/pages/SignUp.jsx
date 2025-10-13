@@ -8,7 +8,7 @@ function SignUp() {
         username: "",
         email: "",
         password: "",
-        securityQuestion: "What’s your favorite color?",
+        securityQuestion: "Whats your favorite color?",
         securityAnswer: "",
     });
     const [error, setError] = useState(null);

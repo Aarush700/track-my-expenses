@@ -33,7 +33,7 @@ export const signup = async (req, res, next) => {
             email: email.toLowerCase().trim(),
             password: hashedPassword,
             securityQuestion,
-            securityAnswer: securityAnswer.trim().toLowerCase(), // Case-insensitive for simplicity
+            securityAnswer: securityAnswer.trim().toLowerCase(),
         });
 
         await newUser.save();

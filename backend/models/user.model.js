@@ -36,6 +36,11 @@ const userSchema = new mongoose.Schema(
             required: true,
             enum: ["Whats your favorite color?", "Whats your pets name?", "Whats your first school?"],
         },
+        securityAnswer: {
+            type: String,
+            required: true,
+            trim: true,
+        },
         profilePicture: {
             type: String,
             default: "https://static.vecteezy.com/system/resources/thumbnails/005/544/718/small_2x/profile-icon-design-free-vector.jpg"

@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 function ForgotPassword() {
     const [formData, setFormData] = useState({
         email: "",
-        securityQuestion: "What’s your favorite color?",
+        securityQuestion: "Whats your favorite color?",
         securityAnswer: "",
         newPassword: "",
     });
@@ -65,9 +65,9 @@ function ForgotPassword() {
                         className="p-4 rounded-lg bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                     >
-                        <option value="What’s your favorite color?">What’s your favorite color?</option>
-                        <option value="What’s your pet’s name?">What’s your pet’s name?</option>
-                        <option value="What’s your first school?">What’s your first school?</option>
+                        <option value="Whats your favorite color?">Whats your favorite color?</option>
+                        <option value="Whats your pets name?">Whats your pets name?</option>
+                        <option value="Whats your first school?">Whats your first school?</option>
                     </select>
                     <input
                         type="text"
