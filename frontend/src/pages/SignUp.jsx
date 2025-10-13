@@ -4,7 +4,13 @@ import { useDispatch } from "react-redux";
 import { signInSuccess } from "../redux/user/userSlice";
 
 function SignUp() {
-    const [formData, setFormData] = useState({});
+    const [formData, setFormData] = useState({
+        username: "",
+        email: "",
+        password: "",
+        securityQuestion: "What’s your favorite color?",
+        securityAnswer: "",
+    });
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
@@ -18,6 +24,7 @@ function SignUp() {
         e.preventDefault();
         setLoading(true);
         setError(null);
+
         try {
             const res = await fetch("/api/auth/signup", {
                 method: "POST",
@@ -57,24 +64,47 @@ function SignUp() {
                         type="text"
                         placeholder="Username"
                         id="username"
-                        className="p-4 rounded-lg bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={formData.username}
                         onChange={handleChange}
+                        className="p-4 rounded-lg bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                     />
                     <input
                         type="email"
                         placeholder="Email"
                         id="email"
-                        className="p-4 rounded-lg bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={formData.email}
                         onChange={handleChange}
+                        className="p-4 rounded-lg bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                     />
                     <input
                         type="password"
                         placeholder="Password"
                         id="password"
-                        className="p-4 rounded-lg bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={formData.password}
                         onChange={handleChange}
+                        className="p-4 rounded-lg bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                    />
+                    <select
+                        id="securityQuestion"
+                        value={formData.securityQuestion}
+                        onChange={handleChange}
+                        className="p-4 rounded-lg bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                    >
+                        <option value="Whats your favorite color?">Whats your favorite color?</option>
+                        <option value="Whats your pets name?">Whats your pets name?</option>
+                        <option value="Whats your first school?">Whats your first school?</option>
+                    </select>
+                    <input
+                        type="text"
+                        placeholder="Answer"
+                        id="securityAnswer"
+                        value={formData.securityAnswer}
+                        onChange={handleChange}
+                        className="p-4 rounded-lg bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                     />
                     <button
@@ -86,7 +116,12 @@ function SignUp() {
                     </button>
                 </form>
                 <div className="text-center mt-6">
-                    <p>Already have an account? <Link to="/sign-in" className="text-blue-600 hover:underline">Sign In</Link></p>
+                    <p>
+                        Already have an account?{" "}
+                        <Link to="/sign-in" className="text-blue-600 hover:underline">
+                            Sign In
+                        </Link>
+                    </p>
                 </div>
                 {error && <p className="text-red-600 text-center mt-4">{error}</p>}
             </div>

@@ -65,7 +65,18 @@ function SignIn() {
                     </button>
                 </form>
                 <div className="text-center mt-6">
-                    <p>New user? <Link to="/sign-up" className="text-blue-600 hover:underline">Sign Up</Link></p>
+                    <p>
+                        New user?{" "}
+                        <Link to="/sign-up" className="text-blue-600 hover:underline">
+                            Sign Up
+                        </Link>
+                    </p>
+                    <p className="mt-2">
+                        Forgot password?{" "}
+                        <Link to="/forgot-password" className="text-blue-600 hover:underline">
+                            Reset Password
+                        </Link>
+                    </p>
                 </div>
                 {error && <p className="text-red-600 text-center mt-4">{error}</p>}
             </div>

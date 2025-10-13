@@ -10,10 +10,10 @@ import { errorHandler } from "../utils/error.js";
 
 export const signup = async (req, res, next) => {
     try {
-        const { username, email, password } = req.body;
+        const { username, email, password, securityQuestion, securityAnswer } = req.body;
 
         // Input validation
-        if (!username || !email || !password) {
+        if (!username || !email || !password || !securityQuestion || !securityAnswer) {
             return next(errorHandler(400, "All fields are required."));
         }
 
@@ -21,20 +21,19 @@ export const signup = async (req, res, next) => {
             return next(errorHandler(400, "Password must be at least 6 characters."));
         }
 
-        // Check if user already exists
         const existingUser = await User.findOne({ $or: [{ email }, { username }] });
         if (existingUser) {
             return next(errorHandler(409, "Username or email already exists."));
         }
 
-        // Hash password with salt rounds
         const hashedPassword = bcryptjs.hashSync(password, 12);
 
-        // Create new user
         const newUser = new User({
             username: username.trim(),
             email: email.toLowerCase().trim(),
-            password: hashedPassword
+            password: hashedPassword,
+            securityQuestion,
+            securityAnswer: securityAnswer.trim().toLowerCase(), // Case-insensitive for simplicity
         });
 
         await newUser.save();
@@ -44,7 +43,6 @@ export const signup = async (req, res, next) => {
             message: "User created successfully!"
         });
     } catch (error) {
-        // Handle MongoDB duplicate key errors
         if (error.code === 11000) {
             return next(errorHandler(409, "Username or email already exists."));
         }
@@ -102,6 +100,52 @@ export const signin = async (req, res, next) => {
                 success: true,
                 user: userWithoutPassword
             });
+    } catch (error) {
+        next(errorHandler(500, "Server error. Please try again later."));
+    }
+};
+
+
+/**
+ * Reset user password using security question
+ * @route POST /api/auth/forgot-password
+ */
+
+export const forgotPassword = async (req, res, next) => {
+    try {
+        const { email, securityQuestion, securityAnswer, newPassword } = req.body;
+
+        // Input validation
+        if (!email || !securityQuestion || !securityAnswer || !newPassword) {
+            return next(errorHandler(400, "All fields are required."));
+        }
+
+        if (newPassword.length < 6) {
+            return next(errorHandler(400, "New password must be at least 6 characters."));
+        }
+
+        // Find user by email
+        const user = await User.findOne({ email: email.toLowerCase().trim() });
+        if (!user) {
+            return next(errorHandler(404, "User not found."));
+        }
+
+        // Verify security answer (case-insensitive)
+        if (user.securityQuestion !== securityQuestion || user.securityAnswer !== securityAnswer.toLowerCase().trim()) {
+            return next(errorHandler(401, "Incorrect security question or answer."));
+        }
+
+        // Hash new password
+        const hashedPassword = bcryptjs.hashSync(newPassword, 12);
+
+        // Update password
+        user.password = hashedPassword;
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            message: "Password reset successfully. Please sign in with your new password."
+        });
     } catch (error) {
         next(errorHandler(500, "Server error. Please try again later."));
     }

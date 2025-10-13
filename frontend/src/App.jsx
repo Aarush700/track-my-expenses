@@ -10,6 +10,7 @@ import ContactUs from "./pages/ContactUs";
 import PrivateRoute from "./components/PrivateRoute";
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
+import ForgotPassword from "./pages/ForgotPassword";
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
         </Route>
         <Route path="/sign-in" element={<SignIn />} />
         <Route path="/sign-up" element={<SignUp />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route element={<PrivateRoute />}>
           <Route path="/profile" element={<Profile />} />
           <Route path="/transactions" element={<Transactions />} />
