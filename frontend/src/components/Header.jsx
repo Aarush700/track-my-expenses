@@ -3,6 +3,8 @@ import { useSelector, useDispatch } from "react-redux";
 import { signOut } from "../redux/user/userSlice";
 import { useState } from "react";
 import { Menu, X, LogOut, User, LayoutDashboard, Receipt, Mail } from "lucide-react";
+import logo from '../assets/images/logo.png';
+
 
 export default function Header() {
     const { currentUser } = useSelector((state) => state.user);
@@ -25,7 +27,7 @@ export default function Header() {
                 <Link to={currentUser ? "/dashboard" : "/"} className="flex items-center gap-3 group">
                     <div className="relative">
                         <img
-                            src="src/assets/images/logo.png"
+                            src={logo}
                             alt="Expense Tracker Logo"
                             className="h-10 w-auto transition-transform group-hover:scale-105"
                         />
