@@ -1,18 +1,25 @@
 {
   "name": "track-my-expenses",
   "version": "1.0.0",
-  "description": "",
-  "main": "server.js",
+  "description": "Track My Expense - Full Stack Application",
+  "main": "backend/server.js",
   "scripts": {
     "dev": "nodemon backend/server.js",
     "start": "node backend/server.js",
-    "test": "echo 'Tests passed' && exit 0"
+    "build": "cd frontend && npm install && npm run build",
+    "test": "jest --detectOpenHandles --forceExit",
+    "test:backend": "jest backend/**/*.test.js",
+    "postinstall": "cd frontend && npm install"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Aarush700/track-my-expenses.git"
   },
-  "keywords": [],
+  "keywords": [
+    "expense-tracker",
+    "fullstack",
+    "mern"
+  ],
   "author": "",
   "license": "ISC",
   "type": "module",
@@ -22,11 +29,12 @@
   "homepage": "https://github.com/Aarush700/track-my-expenses#readme",
   "dependencies": {
     "@dotenvx/dotenvx": "^1.51.0",
+    "applicationinsights": "^2.9.1",
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
-    "express": "^5.1.0",
+    "express": "^4.21.2",
     "express-mongo-sanitize": "^2.2.0",
     "express-rate-limit": "^8.1.0",
     "helmet": "^8.1.0",
