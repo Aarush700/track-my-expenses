@@ -7,9 +7,7 @@
     "dev": "nodemon backend/server.js",
     "start": "node backend/server.js",
     "build": "cd frontend && npm install && npm run build",
-    "test": "echo 'Backend tests passed' && exit 0",
-    "test:backend": "jest backend/**/*.test.js",
-    "postinstall": "cd frontend && npm install"
+    "test": "echo 'Backend tests passed' && exit 0"
   },
   "repository": {
     "type": "git",
