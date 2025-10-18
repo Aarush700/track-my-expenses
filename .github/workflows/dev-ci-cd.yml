@@ -25,11 +25,10 @@ jobs:
           cd frontend
           npm install
 
-      - name: Lint Frontend
+      - name: Lint Frontend (Non-blocking)
         run: |
           cd frontend
-          npm run lint
-        continue-on-error: true
+          npm run lint || echo "⚠️ Linting issues found but continuing..."
 
       - name: Build Frontend
         run: |
@@ -38,7 +37,6 @@ jobs:
 
       - name: Run Backend Tests
         run: npm test
-        continue-on-error: true
 
       - name: Build Success
-        run: echo "✅ Dev branch CI completed!"
+        run: echo "✅ Dev branch CI completed successfully!"
