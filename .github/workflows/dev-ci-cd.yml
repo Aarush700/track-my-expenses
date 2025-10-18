@@ -57,8 +57,8 @@ jobs:
       - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          username: ${{ secrets.GITHUB_TOKEN.DOCKER_USERNAME }}
+          password: ${{ secrets.GITHUB_TOKEN.DOCKER_PASSWORD }}
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v4
@@ -66,10 +66,10 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/track-my-expense:dev-latest
-            ${{ secrets.DOCKER_USERNAME }}/track-my-expense:dev-${{ github.sha }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/track-my-expense:dev-buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/track-my-expense:dev-buildcache,mode=max
+            ${{ secrets.GITHUB_TOKEN.DOCKER_USERNAME }}/track-my-expense:dev-latest
+            ${{ secrets.GITHUB_TOKEN.DOCKER_USERNAME }}/track-my-expense:dev-${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.GITHUB_TOKEN.DOCKER_USERNAME }}/track-my-expense:dev-buildcache
+          cache-to: type=registry,ref=${{ secrets.GITHUB_TOKEN.DOCKER_USERNAME }}/track-my-expense:dev-buildcache,mode=max
 
       - name: Docker Build Success
         run: echo "✅ Docker image built and pushed to Docker Hub!"
@@ -83,33 +83,33 @@ jobs:
       - name: Azure Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.GITHUB_TOKEN.AZURE_CREDENTIALS }}
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ secrets.AZURE_APP_NAME }}
-          images: ${{ secrets.DOCKER_USERNAME }}/track-my-expense:dev-${{ github.sha }}
+          app-name: ${{ secrets.GITHUB_TOKEN.AZURE_APP_NAME }}
+          images: ${{ secrets.GITHUB_TOKEN.DOCKER_USERNAME }}/track-my-expense:dev-${{ github.sha }}
 
       # Level 2: Configure Application Settings with Monitoring
       - name: Set Environment Variables
         run: |
           az webapp config appsettings set \
-            --name ${{ secrets.AZURE_APP_NAME }} \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --name ${{ secrets.GITHUB_TOKEN.AZURE_APP_NAME }} \
+            --resource-group ${{ secrets.GITHUB_TOKEN.AZURE_RESOURCE_GROUP }} \
             --settings \
-              MONGODB_URI="${{ secrets.MONGODB_URI }}" \
-              JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+              MONGODB_URI="${{ secrets.GITHUB_TOKEN.MONGODB_URI }}" \
+              JWT_SECRET="${{ secrets.GITHUB_TOKEN.JWT_SECRET }}" \
               PORT="8080" \
               NODE_ENV="development" \
-              APPINSIGHTS_INSTRUMENTATIONKEY="${{ secrets.APPINSIGHTS_INSTRUMENTATIONKEY }}" \
+              APPINSIGHTS_INSTRUMENTATIONKEY="${{ secrets.GITHUB_TOKEN.APPINSIGHTS_INSTRUMENTATIONKEY }}" \
               WEBSITES_PORT="8080"
 
       - name: Restart Azure Web App
         run: |
           az webapp restart \
-            --name ${{ secrets.AZURE_APP_NAME }} \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}
+            --name ${{ secrets.GITHUB_TOKEN.AZURE_APP_NAME }} \
+            --resource-group ${{ secrets.GITHUB_TOKEN.AZURE_RESOURCE_GROUP }}
 
       - name: Deployment Success
         run: echo "✅ Successfully deployed to Azure!"
@@ -120,13 +120,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.GITHUB_TOKEN.AZURE_CREDENTIALS }}
+
       - name: Wait for Application Startup
         run: sleep 45
+
+      - name: Get Azure Web App URL
+        id: get-url
+        run: |
+          # Get the actual hostname from Azure
+          HOSTNAME=$(az webapp show \
+            --name ${{ secrets.GITHUB_TOKEN.AZURE_APP_NAME }} \
+            --resource-group ${{ secrets.GITHUB_TOKEN.AZURE_RESOURCE_GROUP }} \
+            --query defaultHostName -o tsv)
+          APP_URL="https://$HOSTNAME"
+          echo "app_url=$APP_URL" >> $GITHUB_OUTPUT
+          echo "Using URL: $APP_URL"
 
       - name: Health Check - Verify Application is Accessible
         run: |
           echo "🔍 Testing application accessibility..."
-          response=$(curl -s -o /dev/null -w "%{http_code}" https://${{ secrets.AZURE_APP_NAME }}.azurewebsites.net/health)
+          APP_URL="${{ steps.get-url.outputs.app_url }}"
+          response=$(curl -s -o /dev/null -w "%{http_code}" $APP_URL/health || echo "000")
           echo "Health check response: $response"
 
           if [ $response -eq 200 ]; then
@@ -134,18 +152,19 @@ jobs:
           else
             echo "⚠️ Health check returned: $response (retrying...)"
             sleep 15
-            response=$(curl -s -o /dev/null -w "%{http_code}" https://${{ secrets.AZURE_APP_NAME }}.azurewebsites.net/health)
+            response=$(curl -s -o /dev/null -w "%{http_code}" $APP_URL/health || echo "000")
             if [ $response -eq 200 ]; then
               echo "✅ Application is accessible and healthy!"
             else
-              echo "⚠️ Application may still be starting up"
+              echo "⚠️ Application may still be starting up (Response: $response)"
             fi
           fi
 
       - name: API Endpoint Test
         run: |
           echo "🔍 Testing API endpoints..."
-          response=$(curl -s -o /dev/null -w "%{http_code}" https://${{ secrets.AZURE_APP_NAME }}.azurewebsites.net/api/metrics)
+          APP_URL="${{ steps.get-url.outputs.app_url }}"
+          response=$(curl -s -o /dev/null -w "%{http_code}" $APP_URL/api/metrics || echo "000")
           echo "API metrics response: $response"
 
           if [ $response -eq 200 ]; then
@@ -156,14 +175,16 @@ jobs:
 
       - name: Deployment Summary
         run: |
+          APP_URL="${{ steps.get-url.outputs.app_url }}"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "🚀 DEPLOYMENT SUMMARY"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "✅ Environment: Development"
           echo "✅ Branch: dev"
           echo "✅ Commit: ${{ github.sha }}"
-          echo "✅ Application URL: https://${{ secrets.AZURE_APP_NAME }}.azurewebsites.net"
-          echo "✅ Health Check: https://${{ secrets.AZURE_APP_NAME }}.azurewebsites.net/health"
+          echo "✅ Application URL: $APP_URL"
+          echo "✅ Health Check: $APP_URL/health"
+          echo "✅ API Metrics: $APP_URL/api/metrics"
           echo "✅ Deployment Time: $(date)"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
@@ -176,7 +197,7 @@ jobs:
       - name: Azure Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.GITHUB_TOKEN.AZURE_CREDENTIALS }}
 
       - name: Verify Application Insights
         run: |
@@ -185,5 +206,5 @@ jobs:
           echo "✅ Application Insights enabled"
           echo "✅ Auto-collecting: Requests, Performance, Exceptions, Dependencies"
           echo "✅ View metrics at: Azure Portal > Application Insights"
-          echo "✅ App URL: https://${{ secrets.AZURE_APP_NAME }}.azurewebsites.net"
+          echo "✅ App URL: https://track-my-expense-staging-ckauc9cxhufzbcc2.australiaeast-01.azurewebsites.net"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
