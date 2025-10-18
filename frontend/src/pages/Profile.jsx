@@ -22,7 +22,6 @@ function Profile() {
         password: "",
     });
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
     useEffect(() => {
@@ -33,7 +32,7 @@ function Profile() {
                 password: formData.password,
             });
         }
-    }, [currentUser]);
+    }, [currentUser, formData.password]);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.id]: e.target.value });
@@ -42,10 +41,9 @@ function Profile() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!currentUser?._id) {
-            setError("User ID is missing. Please sign in again.");
+            dispatch(updateUserFailure("User ID is missing. Please sign in again."));
             return;
         }
-        setError("");
         setSuccess("");
         setLoading(true);
 
@@ -66,11 +64,9 @@ function Profile() {
                 setFormData({ ...formData, password: "" });
             } else {
                 dispatch(updateUserFailure(data.message));
-                setError(data.message || "Update failed");
             }
-        } catch (error) {
-            dispatch(updateUserFailure(error.message));
-            setError("Something went wrong. Please try again.");
+        } catch (err) {
+            dispatch(updateUserFailure(err.message));
         } finally {
             setLoading(false);
         }
@@ -79,10 +75,9 @@ function Profile() {
     const handleDeleteAccount = async () => {
         if (!window.confirm("Are you sure you want to delete your account? This cannot be undone.")) return;
         if (!currentUser?._id) {
-            setError("User ID is missing. Please sign in again.");
+            dispatch(deleteUserFailure("User ID is missing. Please sign in again."));
             return;
         }
-        setError("");
         setSuccess("");
         setLoading(true);
         dispatch(deleteUserStart());
@@ -100,11 +95,9 @@ function Profile() {
                 navigate("/sign-in");
             } else {
                 dispatch(deleteUserFailure(data.message));
-                setError(data.message || "Delete failed");
             }
-        } catch (error) {
-            dispatch(deleteUserFailure(error.message));
-            setError("Something went wrong. Please try again.");
+        } catch (err) {
+            dispatch(deleteUserFailure(err.message));
         } finally {
             setLoading(false);
         }
@@ -115,7 +108,7 @@ function Profile() {
             await fetch("/api/auth/signout", { credentials: "include" });
             dispatch(signOut());
             navigate("/sign-in");
-        } catch (error) {
+        } catch (err) {
             // Handle error silently
         }
     };
@@ -160,7 +153,6 @@ function Profile() {
                 </button>
             </form>
 
-            {error && <p className="text-red-600 mt-3 text-center">{error}</p>}
             {success && <p className="text-green-600 mt-3 text-center">{success}</p>}
 
             <div className="flex justify-between mt-5">

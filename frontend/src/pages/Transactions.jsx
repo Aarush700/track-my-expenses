@@ -36,6 +36,7 @@ function Transactions() {
     // Apply filters whenever transactions or filters change
     useEffect(() => {
         applyFilters();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [transactions, filters]);
 
     // Fetch all transactions from API
