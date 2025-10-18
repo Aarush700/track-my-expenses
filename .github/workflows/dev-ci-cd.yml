@@ -25,6 +25,12 @@ jobs:
           cd frontend
           npm install
 
+      - name: Lint Frontend
+        run: |
+          cd frontend
+          npm run lint
+        continue-on-error: true
+
       - name: Build Frontend
         run: |
           cd frontend
@@ -35,4 +41,4 @@ jobs:
         continue-on-error: true
 
       - name: Build Success
-        run: echo "✅ Dev branch build completed!"
+        run: echo "✅ Dev branch CI completed!"
