@@ -56,6 +56,7 @@ function ContactUs() {
                 });
             }
         } catch (error) {
+            console.error('Error submitting contact form:', error);
             setStatus({
                 type: 'error',
                 message: 'Failed to send message. Please check your connection.'
@@ -130,16 +131,22 @@ function ContactUs() {
 
                             {/* Success/Error Message */}
                             {status.message && (
-                                <div className={`mb-6 p-4 rounded-lg flex items-start gap-3 ${status.type === 'success'
-                                    ? 'bg-green-50 border border-green-200'
-                                    : 'bg-red-50 border border-red-200'
-                                    }`}>
+                                <div
+                                    className={`mb-6 p-4 rounded-lg flex items-start gap-3 ${status.type === 'success'
+                                            ? 'bg-green-50 border border-green-200'
+                                            : 'bg-red-50 border border-red-200'
+                                        }`}
+                                >
                                     {status.type === 'success' ? (
                                         <CheckCircle className="text-green-600 flex-shrink-0" size={20} />
                                     ) : (
                                         <AlertCircle className="text-red-600 flex-shrink-0" size={20} />
                                     )}
-                                    <p className={status.type === 'success' ? 'text-green-800' : 'text-red-800'}>
+                                    <p
+                                        className={
+                                            status.type === 'success' ? 'text-green-800' : 'text-red-800'
+                                        }
+                                    >
                                         {status.message}
                                     </p>
                                 </div>
@@ -215,8 +222,8 @@ function ContactUs() {
                                     onClick={handleSubmit}
                                     disabled={isSubmitting}
                                     className={`w-full py-3 px-6 rounded-lg font-semibold text-white transition-all flex items-center justify-center gap-2 ${isSubmitting
-                                        ? 'bg-gray-400 cursor-not-allowed'
-                                        : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg'
+                                            ? 'bg-gray-400 cursor-not-allowed'
+                                            : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg'
                                         }`}
                                 >
                                     {isSubmitting ? (

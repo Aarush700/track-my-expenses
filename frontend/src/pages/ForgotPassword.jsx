@@ -29,16 +29,24 @@ function ForgotPassword() {
                 body: JSON.stringify(formData),
                 credentials: "include",
             });
+
             const data = await response.json();
 
             if (response.ok) {
                 setStatus({ type: "success", message: data.message });
                 setTimeout(() => navigate("/sign-in"), 2000); // Redirect after 2s
             } else {
-                setStatus({ type: "error", message: data.message || "Something went wrong." });
+                setStatus({
+                    type: "error",
+                    message: data.message || "Something went wrong.",
+                });
             }
         } catch (error) {
-            setStatus({ type: "error", message: "Failed to reset password. Please try again." });
+            console.error("Error during password reset:", error);
+            setStatus({
+                type: "error",
+                message: "Failed to reset password. Please try again.",
+            });
         } finally {
             setIsSubmitting(false);
         }
@@ -104,7 +112,10 @@ function ForgotPassword() {
                     </p>
                 </div>
                 {status.message && (
-                    <p className={`text-center mt-4 ${status.type === "success" ? "text-green-600" : "text-red-600"}`}>
+                    <p
+                        className={`text-center mt-4 ${status.type === "success" ? "text-green-600" : "text-red-600"
+                            }`}
+                    >
                         {status.message}
                     </p>
                 )}

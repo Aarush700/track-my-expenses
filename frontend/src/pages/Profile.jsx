@@ -30,7 +30,7 @@ function Profile() {
             setFormData({
                 username: currentUser.username || "",
                 email: currentUser.email || "",
-                password: formData.password,
+                password: "",
             });
         }
     }, [currentUser]);
@@ -115,8 +115,8 @@ function Profile() {
             await fetch("/api/auth/signout", { credentials: "include" });
             dispatch(signOut());
             navigate("/sign-in");
-        } catch (error) {
-            // Handle error silently
+        } catch {
+            // intentionally ignored
         }
     };
 
