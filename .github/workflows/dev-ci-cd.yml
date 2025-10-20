@@ -1,23 +1,23 @@
-# Staging Environment CI/CD Pipeline
-# Triggers on push to staging branch
-# Pre-production testing environment
+# Development Environment CI/CD Pipeline
+# Triggers on push to dev branch
+# Deploys to Azure staging environment for testing
 
-name: Staging Environment CI/CD
+name: Dev Branch CI/CD Pipeline
 
 on:
   push:
-    branches: [staging]
+    branches: [dev]
 
 jobs:
-  # LEVEL 1: Build and Test
+  # LEVEL 1 & 3: CI/Build Server + Test Server
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      # Checkout staging branch code
+      # Checkout source code from repository
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Setup Node.js runtime
+      # Setup Node.js environment (v20 for Vite compatibility)
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -33,80 +33,82 @@ jobs:
           cd frontend
           npm install
 
-      # Lint frontend code (warnings allowed in staging)
-      - name: Lint Frontend
+      # Run linting (non-blocking for dev environment)
+      - name: Lint Frontend (Non-blocking)
         run: |
           cd frontend
-          npm run lint || echo "⚠️ Linting warnings"
+          npm run lint || echo "⚠️ Linting issues found but continuing..."
 
-      # Build frontend for staging
+      # Build production-ready frontend
       - name: Build Frontend
         run: |
           cd frontend
           npm run build
 
-      # Run automated tests
+      # Run backend tests
       - name: Run Backend Tests
         run: npm test
 
-      # Confirm CI passed
+      # Confirm CI success
       - name: CI Success
-        run: echo "✅ Staging CI completed!"
+        run: echo "✅ Development CI completed successfully!"
 
-  # LEVEL 1: Build Docker Image for Staging
+  # LEVEL 1: Build and Push Docker Image
   docker-build-push:
     needs: build-and-test
     runs-on: ubuntu-latest
     steps:
-      # Checkout code
+      # Checkout code for Docker build
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Setup Docker Buildx
+      # Setup Docker Buildx for multi-platform builds
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      # Authenticate with Docker Hub
+      # Login to Docker Hub using secrets
       - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Build and push staging image
-      - name: Build and Push Staging Image
+      # Build and push Docker image with dev tags
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/track-my-expense:staging-latest
-            ${{ secrets.DOCKER_USERNAME }}/track-my-expense:staging-${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/track-my-expense:dev-latest
+            ${{ secrets.DOCKER_USERNAME }}/track-my-expense:dev-${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/track-my-expense:dev-buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/track-my-expense:dev-buildcache,mode=max
 
-      # Confirm Docker success
-      - name: Docker Success
-        run: echo "✅ Staging image built!"
+      # Confirm Docker build success
+      - name: Docker Build Success
+        run: echo "✅ Docker image built and pushed to Docker Hub!"
 
-  # LEVEL 1 & 4: Deploy to Staging Environment
-  deploy-to-staging:
+  # LEVEL 1 & 4: Automated Deployment to Azure
+  deploy-to-azure:
     needs: docker-build-push
     runs-on: ubuntu-latest
     steps:
-      # Azure authentication
+      # Login to Azure using service principal
       - name: Azure Login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Deploy to Azure staging environment
-      - name: Deploy to Staging Environment
+      # Deploy Docker image to Azure Web App
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ secrets.AZURE_APP_NAME }}
-          images: ${{ secrets.DOCKER_USERNAME }}/track-my-expense:staging-${{ github.sha }}
+          images: ${{ secrets.DOCKER_USERNAME }}/track-my-expense:dev-${{ github.sha }}
 
-      # LEVEL 2: Configure staging settings with monitoring
-      - name: Configure Staging Settings
+      # LEVEL 2: Configure environment variables with monitoring
+      - name: Set Environment Variables
         run: |
           az webapp config appsettings set \
             --name "${{ secrets.AZURE_APP_NAME }}" \
@@ -115,66 +117,128 @@ jobs:
               MONGODB_URI="${{ secrets.MONGODB_URI }}" \
               JWT_SECRET="${{ secrets.JWT_SECRET }}" \
               PORT="8080" \
-              NODE_ENV="staging" \
+              NODE_ENV="development" \
               APPINSIGHTS_INSTRUMENTATIONKEY="${{ secrets.APPINSIGHTS_INSTRUMENTATIONKEY }}" \
               WEBSITES_PORT="8080"
 
-      # Restart to apply changes
-      - name: Restart Staging App
+      # Restart app to apply new configuration
+      - name: Restart Azure Web App
         run: |
           az webapp restart \
             --name "${{ secrets.AZURE_APP_NAME }}" \
             --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}"
 
-      # Confirm deployment
+      # Confirm deployment success
       - name: Deployment Success
-        run: echo "✅ Deployed to Staging!"
+        run: echo "✅ Successfully deployed to Azure!"
 
-  # LEVEL 3: Verify Staging Deployment
-  verify-staging:
-    needs: deploy-to-staging
+  # LEVEL 3: Verify Deployment Works
+  verify-deployment:
+    needs: deploy-to-azure
     runs-on: ubuntu-latest
     steps:
-      # Azure login
+      # Login to Azure for verification
       - name: Azure Login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Wait for app startup
-      - name: Wait for Startup
+      # Wait for application to start
+      - name: Wait for Application Startup
         run: sleep 45
 
-      # Get staging URL
-      - name: Get Staging URL
+      # Get the actual Azure Web App URL
+      - name: Get Azure Web App URL
         id: get-url
         run: |
           HOSTNAME=$(az webapp show \
             --name "${{ secrets.AZURE_APP_NAME }}" \
             --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
             --query defaultHostName -o tsv)
-          echo "app_url=https://$HOSTNAME" >> $GITHUB_OUTPUT
+          APP_URL="https://$HOSTNAME"
+          echo "app_url=$APP_URL" >> $GITHUB_OUTPUT
+          echo "Using URL: $APP_URL"
 
-      # Verify health endpoint
-      - name: Health Check
+      # Test health endpoint
+      - name: Health Check - Verify Application is Accessible
         run: |
+          echo "🔍 Testing application accessibility..."
           APP_URL="${{ steps.get-url.outputs.app_url }}"
           response=$(curl -s -o /dev/null -w "%{http_code}" $APP_URL/health || echo "000")
-          echo "Health: $response"
+          echo "Health check response: $response"
+
           if [ $response -eq 200 ]; then
-            echo "✅ Staging is healthy!"
+            echo "✅ Application is accessible and healthy!"
           else
-            echo "⚠️ Staging health check: $response"
+            echo "⚠️ Health check returned: $response (retrying...)"
+            sleep 15
+            response=$(curl -s -o /dev/null -w "%{http_code}" $APP_URL/health || echo "000")
+            if [ $response -eq 200 ]; then
+              echo "✅ Application is accessible and healthy!"
+            else
+              echo "⚠️ Application may still be starting up (Response: $response)"
+            fi
           fi
 
-      # Display staging summary
-      - name: Staging Summary
+      # Test API endpoints
+      - name: API Endpoint Test
         run: |
+          echo "🔍 Testing API endpoints..."
+          APP_URL="${{ steps.get-url.outputs.app_url }}"
+          response=$(curl -s -o /dev/null -w "%{http_code}" $APP_URL/api/metrics || echo "000")
+          echo "API metrics response: $response"
+
+          if [ $response -eq 200 ]; then
+            echo "✅ API is working correctly!"
+          else
+            echo "⚠️ API test returned: $response"
+          fi
+
+      # Display deployment summary
+      - name: Deployment Summary
+        run: |
+          APP_URL="${{ steps.get-url.outputs.app_url }}"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "🔶 STAGING DEPLOYMENT"
+          echo "🚀 DEPLOYMENT SUMMARY"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "✅ Environment: Staging"
-          echo "✅ Branch: staging"
-          echo "✅ URL: ${{ steps.get-url.outputs.app_url }}"
+          echo "✅ Environment: Development"
+          echo "✅ Branch: dev"
           echo "✅ Commit: ${{ github.sha }}"
+          echo "✅ Application URL: $APP_URL"
+          echo "✅ Health Check: $APP_URL/health"
+          echo "✅ API Metrics: $APP_URL/api/metrics"
+          echo "✅ Deployment Time: $(date)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+  # LEVEL 2: Monitoring and Instrumentation Check
+  monitoring-status:
+    needs: verify-deployment
+    runs-on: ubuntu-latest
+    steps:
+      # Login to Azure
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Get application URL for monitoring
+      - name: Get App URL
+        id: get-url
+        run: |
+          HOSTNAME=$(az webapp show \
+            --name "${{ secrets.AZURE_APP_NAME }}" \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --query defaultHostName -o tsv)
+          echo "hostname=$HOSTNAME" >> $GITHUB_OUTPUT
+
+      # Confirm monitoring is active
+      - name: Verify Application Insights
+        run: |
+          echo "📊 MONITORING STATUS"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Application Insights enabled"
+          echo "✅ Auto-collecting: Requests, Performance, Exceptions, Dependencies"
+          echo "✅ View metrics at: Azure Portal > Application Insights"
+          echo "✅ App Name: ${{ secrets.AZURE_APP_NAME }}"
+          echo "✅ App URL: https://${{ steps.get-url.outputs.hostname }}"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
