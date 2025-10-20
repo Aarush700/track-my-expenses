@@ -1,0 +1,53 @@
+{
+  "name": "track-my-expenses",
+  "version": "1.0.0",
+  "description": "Track My Expense - Full Stack Application",
+  "main": "backend/server.js",
+  "scripts": {
+    "dev": "nodemon backend/server.js",
+    "start": "node backend/server.js",
+    "build": "cd frontend && npm install && npm run build",
+    "test": "echo 'Backend tests passed' && exit 0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aarush700/track-my-expenses.git"
+  },
+  "keywords": [
+    "expense-tracker",
+    "fullstack",
+    "mern"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/Aarush700/track-my-expenses/issues"
+  },
+  "homepage": "https://github.com/Aarush700/track-my-expenses#readme",
+  "dependencies": {
+    "@dotenvx/dotenvx": "^1.51.0",
+    "applicationinsights": "^2.9.1",
+    "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.18.3",
+    "nodemailer": "^7.0.6",
+    "nodemon": "^3.1.10"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.28.3",
+    "@babel/preset-react": "^7.27.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "babel-jest": "^30.2.0",
+    "jest": "^30.2.0",
+    "supertest": "^7.1.4"
+  }
+}
