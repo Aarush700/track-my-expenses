@@ -98,7 +98,7 @@ jobs:
       - name: Azure Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_CREDENTIALS_PRODUCTION }}
 
       # Deploy Docker image to Azure Web App
       - name: Deploy to Azure Web App
@@ -141,7 +141,7 @@ jobs:
       - name: Azure Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_CREDENTIALS_PRODUCTION }}
 
       # Wait for application to start
       - name: Wait for Application Startup
@@ -219,7 +219,7 @@ jobs:
       - name: Azure Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_CREDENTIALS_PRODUCTION }}
 
       # Get application URL for monitoring
       - name: Get App URL

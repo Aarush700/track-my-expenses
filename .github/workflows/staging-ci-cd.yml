@@ -96,7 +96,7 @@ jobs:
       - name: Azure Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_CREDENTIALS_PRODUCTION }}
 
       # Deploy to Azure staging environment
       - name: Deploy to Staging Environment
@@ -139,7 +139,7 @@ jobs:
       - name: Azure Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_CREDENTIALS_PRODUCTION }}
 
       # Wait for app startup
       - name: Wait for Startup
