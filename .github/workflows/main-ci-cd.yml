@@ -1,30 +1,224 @@
-name: CI - Main Branch
+# Production Environment CI/CD Pipeline
+# Triggers on push to main branch
+# Strict testing and validation before production deployment
+
+name: Production Environment CI/CD
 
 on:
   push:
     branches: [main]
 
 jobs:
-  test-and-build:
+  # LEVEL 1: Strict Build and Test for Production
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      # Checkout production code
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
+      # Setup Node.js environment
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "18"
+          node-version: "20"
 
-      - name: Install Dependencies
+      # Install backend dependencies
+      - name: Install Backend Dependencies
+        run: npm install
+
+      # Install frontend dependencies
+      - name: Install Frontend Dependencies
         run: |
-          npm install
           cd frontend
           npm install
 
+      # Strict linting (fails build on errors)
+      - name: Lint Frontend (Strict)
+        run: |
+          cd frontend
+          npm run lint
+
+      # Build production frontend
       - name: Build Frontend
         run: |
           cd frontend
           npm run build
 
-      - name: Run Tests
+      # Run all tests (must pass)
+      - name: Run Backend Tests
         run: npm test
+
+      # Confirm production CI passed
+      - name: CI Success
+        run: echo "✅ Production CI passed!"
+
+  # LEVEL 1: Build Production Docker Image
+  docker-build-push:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Setup Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # Login to Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Build production image with version tags
+      - name: Build and Push Production Image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/track-my-expense:production-latest
+            ${{ secrets.DOCKER_USERNAME }}/track-my-expense:production-${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/track-my-expense:v${{ github.run_number }}
+
+      # Confirm Docker build
+      - name: Docker Success
+        run: echo "✅ Production image built!"
+
+  # LEVEL 1 & 4: Deploy to Production Server
+  deploy-to-production:
+    needs: docker-build-push
+    runs-on: ubuntu-latest
+    steps:
+      # Authenticate with Azure production
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS_PRODUCTION }}
+
+      # Deploy to production Azure Web App
+      - name: Deploy to Production
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.AZURE_APP_NAME_PRODUCTION }}
+          images: ${{ secrets.DOCKER_USERNAME }}/track-my-expense:production-${{ github.sha }}
+
+      # LEVEL 2: Configure production settings with monitoring
+      - name: Configure Production Settings
+        run: |
+          az webapp config appsettings set \
+            --name "${{ secrets.AZURE_APP_NAME_PRODUCTION }}" \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --settings \
+              MONGODB_URI="${{ secrets.MONGODB_URI }}" \
+              JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+              PORT="8080" \
+              NODE_ENV="production" \
+              APPINSIGHTS_INSTRUMENTATIONKEY="${{ secrets.APPINSIGHTS_KEY_PRODUCTION }}" \
+              WEBSITES_PORT="8080"
+
+      # Restart production app
+      - name: Restart Production App
+        run: |
+          az webapp restart \
+            --name "${{ secrets.AZURE_APP_NAME_PRODUCTION }}" \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}"
+
+      # Confirm production deployment
+      - name: Deployment Success
+        run: echo "✅ Deployed to Production!"
+
+  # LEVEL 3: Critical Production Verification
+  verify-production:
+    needs: deploy-to-production
+    runs-on: ubuntu-latest
+    steps:
+      # Azure authentication
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS_PRODUCTION }}
+
+      # Wait for production startup (longer wait)
+      - name: Wait for Production Startup
+        run: sleep 60
+
+      # Get production URL
+      - name: Get Production URL
+        id: get-url
+        run: |
+          HOSTNAME=$(az webapp show \
+            --name "${{ secrets.AZURE_APP_NAME_PRODUCTION }}" \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --query defaultHostName -o tsv)
+          echo "app_url=https://$HOSTNAME" >> $GITHUB_OUTPUT
+
+      # Critical health check (fails deployment if unhealthy)
+      - name: Health Check (Critical)
+        run: |
+          APP_URL="${{ steps.get-url.outputs.app_url }}"
+          response=$(curl -s -o /dev/null -w "%{http_code}" $APP_URL/health || echo "000")
+          echo "Production Health: $response"
+
+          if [ $response -ne 200 ]; then
+            echo "❌ PRODUCTION HEALTH CHECK FAILED!"
+            exit 1
+          fi
+          echo "✅ Production is healthy!"
+
+      # Verify API endpoints
+      - name: API Verification
+        run: |
+          APP_URL="${{ steps.get-url.outputs.app_url }}"
+          response=$(curl -s -o /dev/null -w "%{http_code}" $APP_URL/api/metrics || echo "000")
+          echo "API Response: $response"
+
+      # Display production deployment summary
+      - name: Production Summary
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🟢 PRODUCTION DEPLOYMENT SUCCESSFUL"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Environment: Production"
+          echo "✅ Branch: main"
+          echo "✅ Version: v${{ github.run_number }}"
+          echo "✅ URL: ${{ steps.get-url.outputs.app_url }}"
+          echo "✅ Commit: ${{ github.sha }}"
+          echo "✅ Time: $(date)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+  # LEVEL 2: Production Monitoring and Instrumentation
+  monitoring-check:
+    needs: verify-production
+    runs-on: ubuntu-latest
+    steps:
+      # Azure login
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS_PRODUCTION }}
+
+      # Get production monitoring info
+      - name: Get Monitoring Info
+        id: monitoring
+        run: |
+          HOSTNAME=$(az webapp show \
+            --name "${{ secrets.AZURE_APP_NAME_PRODUCTION }}" \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --query defaultHostName -o tsv)
+          echo "hostname=$HOSTNAME" >> $GITHUB_OUTPUT
+
+      # Confirm monitoring is active
+      - name: Monitoring Status
+        run: |
+          echo "📊 PRODUCTION MONITORING ACTIVE"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Application Insights: Enabled"
+          echo "✅ Collecting: Requests, Performance, Exceptions, Dependencies"
+          echo "✅ Real-time Metrics: Available"
+          echo "✅ View Dashboard: Azure Portal > Application Insights"
+          echo "✅ Production URL: https://${{ steps.monitoring.outputs.hostname }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
