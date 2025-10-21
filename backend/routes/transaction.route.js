@@ -6,6 +6,7 @@ import {
     updateTransaction,
     deleteTransaction,
     getTransactionStats,
+    getMonthlySummary,
 } from "../controllers/transaction.controller.js";
 
 const router = express.Router();
@@ -28,5 +29,8 @@ router.delete("/:id", verifyToken, deleteTransaction);
 
 // Get transaction statistics
 router.get("/stats", verifyToken, getTransactionStats);
+
+// Get monthly transaction summary
+router.get("/monthly-summary", verifyToken, getMonthlySummary);
 
 export default router;
