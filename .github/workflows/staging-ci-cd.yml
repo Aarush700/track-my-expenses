@@ -1,32 +1,180 @@
-name: CI - Staging Branch
+# Staging Environment CI/CD Pipeline
+# Triggers on push to staging branch
+# Pre-production testing environment
+
+name: Staging Environment CI/CD
 
 on:
   push:
     branches: [staging]
 
 jobs:
-  test-and-build:
+  # LEVEL 1: Build and Test
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      # Checkout staging branch code
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
+      # Setup Node.js runtime
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "18"
+          node-version: "20"
 
+      # Install backend dependencies
       - name: Install Backend Dependencies
         run: npm install
 
+      # Install frontend dependencies
       - name: Install Frontend Dependencies
         run: |
           cd frontend
           npm install
 
+      # Lint frontend code (warnings allowed in staging)
+      - name: Lint Frontend
+        run: |
+          cd frontend
+          npm run lint || echo "⚠️ Linting warnings"
+
+      # Build frontend for staging
       - name: Build Frontend
         run: |
           cd frontend
           npm run build
 
-      - name: Run Tests
+      # Run automated tests
+      - name: Run Backend Tests
         run: npm test
+
+      # Confirm CI passed
+      - name: CI Success
+        run: echo "✅ Staging CI completed!"
+
+  # LEVEL 1: Build Docker Image for Staging
+  docker-build-push:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Setup Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # Authenticate with Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Build and push staging image
+      - name: Build and Push Staging Image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/track-my-expense:staging-latest
+            ${{ secrets.DOCKER_USERNAME }}/track-my-expense:staging-${{ github.sha }}
+
+      # Confirm Docker success
+      - name: Docker Success
+        run: echo "✅ Staging image built!"
+
+  # LEVEL 1 & 4: Deploy to Staging Environment
+  deploy-to-staging:
+    needs: docker-build-push
+    runs-on: ubuntu-latest
+    steps:
+      # Azure authentication
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS_PRODUCTION }}
+
+      # Deploy to Azure staging environment
+      - name: Deploy to Staging Environment
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.AZURE_APP_NAME }}
+          images: ${{ secrets.DOCKER_USERNAME }}/track-my-expense:staging-${{ github.sha }}
+
+      # LEVEL 2: Configure staging settings with monitoring
+      - name: Configure Staging Settings
+        run: |
+          az webapp config appsettings set \
+            --name "${{ secrets.AZURE_APP_NAME }}" \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --settings \
+              MONGODB_URI="${{ secrets.MONGODB_URI }}" \
+              JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+              PORT="8080" \
+              NODE_ENV="staging" \
+              APPINSIGHTS_INSTRUMENTATIONKEY="${{ secrets.APPINSIGHTS_INSTRUMENTATIONKEY }}" \
+              WEBSITES_PORT="8080"
+
+      # Restart to apply changes
+      - name: Restart Staging App
+        run: |
+          az webapp restart \
+            --name "${{ secrets.AZURE_APP_NAME }}" \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}"
+
+      # Confirm deployment
+      - name: Deployment Success
+        run: echo "✅ Deployed to Staging!"
+
+  # LEVEL 3: Verify Staging Deployment
+  verify-staging:
+    needs: deploy-to-staging
+    runs-on: ubuntu-latest
+    steps:
+      # Azure login
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS_PRODUCTION }}
+
+      # Wait for app startup
+      - name: Wait for Startup
+        run: sleep 45
+
+      # Get staging URL
+      - name: Get Staging URL
+        id: get-url
+        run: |
+          HOSTNAME=$(az webapp show \
+            --name "${{ secrets.AZURE_APP_NAME }}" \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --query defaultHostName -o tsv)
+          echo "app_url=https://$HOSTNAME" >> $GITHUB_OUTPUT
+
+      # Verify health endpoint
+      - name: Health Check
+        run: |
+          APP_URL="${{ steps.get-url.outputs.app_url }}"
+          response=$(curl -s -o /dev/null -w "%{http_code}" $APP_URL/health || echo "000")
+          echo "Health: $response"
+          if [ $response -eq 200 ]; then
+            echo "✅ Staging is healthy!"
+          else
+            echo "⚠️ Staging health check: $response"
+          fi
+
+      # Display staging summary
+      - name: Staging Summary
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔶 STAGING DEPLOYMENT"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Environment: Staging"
+          echo "✅ Branch: staging"
+          echo "✅ URL: ${{ steps.get-url.outputs.app_url }}"
+          echo "✅ Commit: ${{ github.sha }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

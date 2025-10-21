@@ -104,7 +104,7 @@ if (!jwtSecret) {
     process.exit(1);
 }
 
-// MongoDB connection with monitoring
+// MongoDB connection + monitoring
 mongoose
     .connect(mongoUri)
     .then(() => {
