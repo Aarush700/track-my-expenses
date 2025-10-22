@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { DollarSign, TrendingUp, TrendingDown, Activity, Calendar, RefreshCw } from 'lucide-react';
+import {
+    PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
+    CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend
+} from 'recharts';
+import {
+    DollarSign, TrendingUp, TrendingDown, Activity, Calendar, RefreshCw
+} from 'lucide-react';
 
 function Dashboard() {
     // State for stats and transactions
@@ -22,28 +27,61 @@ function Dashboard() {
         try {
             // Fetch stats
             const statsRes = await fetch('/api/transactions/stats', {
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include', // Include cookies for authentication
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
             });
-
             if (!statsRes.ok) throw new Error('Failed to fetch stats');
             const statsData = await statsRes.json();
 
             // Fetch recent transactions
             const transactionsRes = await fetch('/api/transactions', {
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
             });
-
             if (!transactionsRes.ok) throw new Error('Failed to fetch transactions');
             const transactionsData = await transactionsRes.json();
 
+            // Fetch monthly summary and attach to stats
+            const monthlyRes = await fetch('/api/transactions/monthly-summary', {
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+            });
+
+            if (monthlyRes.ok) {
+                const monthlyData = await monthlyRes.json();
+
+                // Normalize possible shapes:
+                // - { monthlySummary: { "Jan": { income, expense }, ... } }
+                // - { months: [...], income: [...], expenses: [...] }
+                let monthlySummary = {};
+
+                if (monthlyData.monthlySummary && typeof monthlyData.monthlySummary === 'object') {
+                    monthlySummary = monthlyData.monthlySummary;
+                } else if (Array.isArray(monthlyData.months) && Array.isArray(monthlyData.income) && Array.isArray(monthlyData.expenses)) {
+                    monthlyData.months.forEach((m, i) => {
+                        monthlySummary[m] = {
+                            income: monthlyData.income[i] || 0,
+                            expense: monthlyData.expenses[i] || 0
+                        };
+                    });
+                } else if (Array.isArray(monthlyData)) {
+                    // maybe backend returned an array of { month, income, expense }
+                    monthlyData.forEach(item => {
+                        if (item.month) monthlySummary[item.month] = { income: item.income || 0, expense: item.expense || 0 };
+                    });
+                } else {
+                    console.warn('Unknown monthly summary format', monthlyData);
+                }
+
+                statsData.monthlySummary = monthlySummary;
+            } else {
+                console.warn('Monthly summary request failed, skipping chart data.');
+                statsData.monthlySummary = {};
+            }
+
+            // Save data
             setStats(statsData);
-            setRecentTransactions(transactionsData.transactions.slice(0, 5)); // Get only 5 recent
+            setRecentTransactions(transactionsData.transactions.slice(0, 5));
         } catch (err) {
             setError(err.message);
         } finally {
@@ -51,34 +89,32 @@ function Dashboard() {
         }
     };
 
-    // Prepare data for charts
+    // Prepare category chart data
     const getCategoryChartData = () => {
         if (!stats?.categorySummary) return [];
         return Object.entries(stats.categorySummary).map(([name, value]) => ({
             name,
-            value: parseFloat(value.toFixed(2))
+            value: parseFloat(value.toFixed(2)),
         }));
     };
 
-    // Colors for pie chart
+    // Prepare monthly trend data
+    const getMonthlyTrendData = () => {
+        if (!stats?.monthlySummary) return [];
+        return Object.entries(stats.monthlySummary).map(([month, values]) => ({
+            month,
+            income: values.income || 0,
+            expense: values.expense || 0,
+        }));
+    };
+
     const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
 
-    // Format currency
-    const formatCurrency = (amount) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-        }).format(amount);
-    };
+    const formatCurrency = (amount) =>
+        new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 
-    // Format date
-    const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-        });
-    };
+    const formatDate = (dateString) =>
+        new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
     if (loading) {
         return (
@@ -127,7 +163,7 @@ function Dashboard() {
 
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    {/* Balance Card */}
+                    {/* Balance */}
                     <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
                         <div className="flex items-center justify-between mb-2">
                             <p className="text-blue-100 text-sm">Current Balance</p>
@@ -139,7 +175,7 @@ function Dashboard() {
                         </p>
                     </div>
 
-                    {/* Income Card */}
+                    {/* Income */}
                     <div className="bg-white rounded-lg shadow p-6">
                         <div className="flex items-center justify-between">
                             <div>
@@ -154,7 +190,7 @@ function Dashboard() {
                         </div>
                     </div>
 
-                    {/* Expense Card */}
+                    {/* Expenses */}
                     <div className="bg-white rounded-lg shadow p-6">
                         <div className="flex items-center justify-between">
                             <div>
@@ -169,7 +205,7 @@ function Dashboard() {
                         </div>
                     </div>
 
-                    {/* Transactions Count Card */}
+                    {/* Count */}
                     <div className="bg-white rounded-lg shadow p-6">
                         <div className="flex items-center justify-between">
                             <div>
@@ -186,30 +222,123 @@ function Dashboard() {
                 </div>
 
                 {/* Charts Section */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    {/* Pie Chart - Category Distribution */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    {/* Pie Chart */}
                     <div className="bg-white rounded-lg shadow p-6">
                         <h2 className="text-xl font-semibold text-gray-800 mb-4">Spending by Category</h2>
+
                         {getCategoryChartData().length > 0 ? (
-                            <ResponsiveContainer width="100%" height={300}>
-                                <PieChart>
-                                    <Pie
-                                        data={getCategoryChartData()}
-                                        cx="50%"
-                                        cy="50%"
-                                        labelLine={false}
-                                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                                        outerRadius={100}
-                                        fill="#8884d8"
-                                        dataKey="value"
-                                    >
-                                        {getCategoryChartData().map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip formatter={(value) => formatCurrency(value)} />
-                                </PieChart>
-                            </ResponsiveContainer>
+                            <div
+                                className="flex flex-col lg:flex-row items-center justify-between w-full"
+                                style={{
+                                    minHeight: 340,
+                                    overflow: 'hidden',
+                                    position: 'relative',
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        width: '60%',
+                                        height: 320,
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                    }}
+                                >
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart
+                                            margin={{
+                                                top: 10,
+                                                bottom: 10,
+                                                left: 30,
+                                                right: 30,
+                                            }}
+                                        >
+                                            <Pie
+                                                data={getCategoryChartData()}
+                                                cx="50%"
+                                                cy="50%"
+                                                outerRadius={
+                                                    getCategoryChartData().length > 8
+                                                        ? 80
+                                                        : getCategoryChartData().length > 5
+                                                            ? 90
+                                                            : 100
+                                                }
+                                                dataKey="value"
+                                                fill="#8884d8"
+                                                labelLine={false}
+                                            >
+                                                {getCategoryChartData().map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip formatter={(value) => formatCurrency(value)} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+
+                                <div
+                                    style={{
+                                        width: '40%',
+                                        maxHeight: 300,
+                                        overflowY: 'auto',
+                                        paddingLeft: '10px',
+                                        paddingRight: '5px',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        justifyContent: 'flex-start',
+                                        position: 'relative',
+                                    }}
+                                    className="legend-container"
+                                >
+                                    {getCategoryChartData().map((item, index) => {
+                                        const total = getCategoryChartData().reduce((sum, val) => sum + val.value, 0);
+                                        const percent = ((item.value / total) * 100).toFixed(1);
+                                        return (
+                                            <div
+                                                key={item.name}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    marginBottom: '8px',
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        width: 10,
+                                                        height: 10,
+                                                        borderRadius: '50%',
+                                                        backgroundColor: COLORS[index % COLORS.length],
+                                                        marginRight: 8,
+                                                        flexShrink: 0,
+                                                    }}
+                                                ></div>
+                                                <span
+                                                    style={{
+                                                        color: COLORS[index % COLORS.length],
+                                                        fontSize: '14px',
+                                                        wordBreak: 'break-word',
+                                                    }}
+                                                >
+                                                    {item.name} — {percent}%
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+
+                                    <div
+                                        style={{
+                                            position: 'sticky',
+                                            bottom: 0,
+                                            height: 30,
+                                            background:
+                                                'linear-gradient(to top, white, rgba(255,255,255,0))',
+                                            pointerEvents: 'none',
+                                        }}
+                                    ></div>
+                                </div>
+                            </div>
                         ) : (
                             <div className="h-64 flex items-center justify-center text-gray-400">
                                 No data available
@@ -217,7 +346,8 @@ function Dashboard() {
                         )}
                     </div>
 
-                    {/* Bar Chart - Category Breakdown */}
+
+                    {/* Bar Chart */}
                     <div className="bg-white rounded-lg shadow p-6">
                         <h2 className="text-xl font-semibold text-gray-800 mb-4">Category Breakdown</h2>
                         {getCategoryChartData().length > 0 ? (
@@ -229,6 +359,27 @@ function Dashboard() {
                                     <Tooltip formatter={(value) => formatCurrency(value)} />
                                     <Bar dataKey="value" fill="#3b82f6" />
                                 </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-64 flex items-center justify-center text-gray-400">
+                                No data available
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Line Chart - Monthly Income vs Expenses */}
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <h2 className="text-xl font-semibold text-gray-800 mb-4">Monthly Trends</h2>
+                        {getMonthlyTrendData().length > 0 ? (
+                            <ResponsiveContainer width="100%" height={300}>
+                                <LineChart data={getMonthlyTrendData()}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="month" />
+                                    <YAxis />
+                                    <Tooltip formatter={(value) => formatCurrency(value)} />
+                                    <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={3} name="Income" />
+                                    <Line type="monotone" dataKey="expense" stroke="#ef4444" strokeWidth={3} name="Expense" />
+                                </LineChart>
                             </ResponsiveContainer>
                         ) : (
                             <div className="h-64 flex items-center justify-center text-gray-400">
@@ -264,10 +415,12 @@ function Dashboard() {
                                         <tr key={transaction._id} className="border-b hover:bg-gray-50">
                                             <td className="py-3 px-4 text-gray-800">{formatDate(transaction.date)}</td>
                                             <td className="py-3 px-4">
-                                                <span className={`px-3 py-1 rounded-full text-sm ${transaction.type === 'income'
+                                                <span
+                                                    className={`px-3 py-1 rounded-full text-sm ${transaction.type === 'income'
                                                         ? 'bg-green-100 text-green-800'
                                                         : 'bg-red-100 text-red-800'
-                                                    }`}>
+                                                        }`}
+                                                >
                                                     {transaction.type}
                                                 </span>
                                             </td>
@@ -279,8 +432,10 @@ function Dashboard() {
                                             <td className="py-3 px-4 text-gray-800">
                                                 {transaction.description || 'No description'}
                                             </td>
-                                            <td className={`py-3 px-4 text-right font-semibold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
-                                                }`}>
+                                            <td
+                                                className={`py-3 px-4 text-right font-semibold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                                                    }`}
+                                            >
                                                 {transaction.type === 'income' ? '+' : '-'}
                                                 {formatCurrency(transaction.amount)}
                                             </td>
