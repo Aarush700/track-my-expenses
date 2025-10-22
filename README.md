@@ -1,1 +1,1 @@
-# Main Branch Setup
+# Staging Branch Setup
