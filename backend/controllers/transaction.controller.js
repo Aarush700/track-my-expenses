@@ -1,5 +1,6 @@
 import Transaction from "../models/transaction.model.js";
 import { errorHandler } from "../utils/error.js";
+import mongoose from "mongoose";
 
 /**
  * Get all transactions for the logged-in user
@@ -195,4 +196,71 @@ export const getTransactionStats = async (req, res, next) => {
     } catch (error) {
         next(errorHandler(500, "Server error. Please try again."));
     }
+};
+
+
+// Monthly summary grouped by transaction type
+export const getMonthlySummary = async (req, res, next) => {
+  try {
+    const userId = new mongoose.Types.ObjectId(req.user.id);
+
+    // Aggregate all transactions by year-month
+    const pipeline = [
+      { $match: { userId } },
+      {
+        $addFields: {
+          year: { $year: "$date" },
+          month: { $month: "$date" },
+        },
+      },
+      {
+        $group: {
+          _id: { year: "$year", month: "$month" },
+          income: {
+            $sum: { $cond: [{ $eq: ["$type", "income"] }, "$amount", 0] },
+          },
+          expense: {
+            $sum: { $cond: [{ $eq: ["$type", "expense"] }, "$amount", 0] },
+          },
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
+    ];
+
+    const results = await Transaction.aggregate(pipeline);
+
+    // Initialize all 12 months with 0s
+    const monthlySummary = {
+      Jan: { income: 0, expense: 0 },
+      Feb: { income: 0, expense: 0 },
+      Mar: { income: 0, expense: 0 },
+      Apr: { income: 0, expense: 0 },
+      May: { income: 0, expense: 0 },
+      Jun: { income: 0, expense: 0 },
+      Jul: { income: 0, expense: 0 },
+      Aug: { income: 0, expense: 0 },
+      Sep: { income: 0, expense: 0 },
+      Oct: { income: 0, expense: 0 },
+      Nov: { income: 0, expense: 0 },
+      Dec: { income: 0, expense: 0 },
+    };
+
+    // Fill in any months found in DB
+    results.forEach((r) => {
+      const date = new Date(r._id.year, r._id.month - 1);
+      const monthName = date.toLocaleString("en-US", { month: "short" });
+
+      if (monthlySummary[monthName]) {
+        monthlySummary[monthName] = {
+          income: r.income,
+          expense: r.expense,
+        };
+      }
+    });
+
+    res.status(200).json({ success: true, monthlySummary });
+  } catch (error) {
+    console.error("getMonthlySummary error:", error);
+    next(errorHandler(500, "Server error. Please try again."));
+  }
 };
