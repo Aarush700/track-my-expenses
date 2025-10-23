@@ -13,11 +13,11 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      # Checkout staging branch code
+      # Checkout code
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Setup Node.js runtime
+      # Setup Node.js environment
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -27,31 +27,37 @@ jobs:
       - name: Install Backend Dependencies
         run: npm install
 
+      # Run backend tests
+      - name: Run Backend Tests
+        run: npm test
+
       # Install frontend dependencies
       - name: Install Frontend Dependencies
         run: |
           cd frontend
           npm install
 
-      # Lint frontend code (warnings allowed in staging)
+      # Lint frontend code
       - name: Lint Frontend
         run: |
           cd frontend
           npm run lint || echo "⚠️ Linting warnings"
 
-      # Build frontend for staging
+      # Run frontend tests
+      - name: Run Frontend Tests
+        run: |
+          cd frontend
+          npm test -- --passWithNoTests
+
+      # Build frontend
       - name: Build Frontend
         run: |
           cd frontend
           npm run build
 
-      # Run automated tests
-      - name: Run Backend Tests
-        run: npm test
-
-      # Confirm CI passed
+      # Confirm success
       - name: CI Success
-        run: echo "✅ Staging CI completed!"
+        run: echo "✅ All tests passed and build completed!"
 
   # LEVEL 1: Build Docker Image for Staging
   docker-build-push:
